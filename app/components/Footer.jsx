@@ -28,12 +28,16 @@ export default function Footer() {
 
   return (
     <footer
-      className="relative border-t border-white/8 overflow-hidden"
-      style={{ fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif", background: "#080f0c" }}
+      className="relative overflow-hidden"
+      style={{
+        fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
+        background: "#080f0c",
+        borderTop: "1px solid rgba(255,255,255,0.08)",
+      }}
     >
       {/* Glow */}
       <div
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[60vw] h-48 pointer-events-none opacity-20"
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[60vw] h-48 pointer-events-none opacity-25"
         style={{ background: "radial-gradient(ellipse, #C8873A 0%, transparent 70%)" }}
       />
 
@@ -45,7 +49,7 @@ export default function Footer() {
           <LinkColumns user={user} />
         </div>
 
-        {/* ── Mobile: brand on top, link cols in 2-col grid below ── */}
+        {/* ── Mobile ── */}
         <div className="md:hidden mb-8">
           <div className="mb-8">
             <BrandBlock user={user} appname={appname} />
@@ -56,16 +60,19 @@ export default function Footer() {
         </div>
 
         {/* ── Bottom bar ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-white/8">
-          <p className="text-xs text-white/20 text-center sm:text-left">
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <p className="text-xs text-center sm:text-left" style={{ color: "rgba(255,255,255,0.6)" }}>
             © {new Date().getFullYear()} {appname}. All rights reserved.
           </p>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/20">crafted by</span>
+            <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>crafted by</span>
             <span
               style={{
                 fontFamily: "'Great Vibes', cursive",
-                fontSize: "1.15rem",
+                fontSize: "1.25rem",
                 background: "linear-gradient(90deg, #C8873A, #E8A850, #C8873A)",
                 backgroundSize: "200% auto",
                 WebkitBackgroundClip: "text",
@@ -88,29 +95,31 @@ function BrandBlock({ user, appname }) {
     <div>
       <Link href={user ? "/dashboard" : "/"} className="inline-flex items-center gap-2.5 mb-4 group">
         <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-[#0D1F1A] font-black text-sm shrink-0"
-          style={{ background: "linear-gradient(135deg, #C8873A, #E8A850)" }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm shrink-0 transition-transform group-hover:scale-105"
+          style={{ background: "linear-gradient(135deg, #C8873A, #E8A850)", color: "#0D1F1A" }}
         >
           S
         </div>
-        <span className="text-xl font-bold text-white"
-          style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+        <span
+          className="text-xl font-bold"
+          style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#ffffff" }}
+        >
           {appname}
         </span>
       </Link>
 
-      <p className="text-white/35 text-sm leading-relaxed mb-5 max-w-xs">
+      <p className="text-sm leading-relaxed mb-5 max-w-xs" style={{ color: "rgba(255,255,255,0.7" }}>
         Nigeria's trusted platform for fractional land investment. Grow your wealth one plot at a time.
       </p>
 
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {[
           { icon: <MapPin size={12} />, text: "Ibadan, Oyo State, Nigeria"         },
           { icon: <Mail size={12} />,   text: `hello@${appname.toLowerCase()}.com` },
           { icon: <Phone size={12} />,  text: "+234 800 000 0000"                   },
         ].map((item) => (
-          <div key={item.text} className="flex items-center gap-2 text-white/30 text-xs">
-            <span className="text-amber-600/70 shrink-0">{item.icon}</span>
+          <div key={item.text} className="flex items-center gap-2 text-xs" style={{ color: "rgba(255,255,255,0.7" }}>
+            <span className="shrink-0" style={{ color: "#C8873A" }}>{item.icon}</span>
             <span className="truncate">{item.text}</span>
           </div>
         ))}
@@ -126,14 +135,22 @@ function LinkColumns({ user }) {
         const visibleLinks = col.links.filter((l) => !l.authOnly || user);
         return (
           <div key={col.heading}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/25 mb-3">
+            <p
+              className="text-[10px] font-black uppercase tracking-[0.2em] mb-3"
+              style={{ color: "rgba(255,255,255,0.40)" }}
+            >
               {col.heading}
             </p>
             <ul className="space-y-2.5">
               {visibleLinks.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href}
-                    className="text-sm text-white/40 hover:text-white transition-colors">
+                  <Link
+                    href={link.href}
+                    className="text-sm transition-colors"
+                    style={{ color: "rgba(255,255,255,0.60)" }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#ffffff"}
+                    onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.60)"}
+                  >
                     {link.label}
                   </Link>
                 </li>

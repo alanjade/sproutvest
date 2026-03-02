@@ -148,7 +148,7 @@ export default function Dashboard() {
           style={{ background: "radial-gradient(circle, rgba(200,135,58,0.11) 0%, transparent 65%)" }} />
         <div className="absolute -bottom-[10%] -left-[10%] w-[45vw] h-[45vw] rounded-full"
           style={{ background: "radial-gradient(circle, rgba(45,122,85,0.09) 0%, transparent 65%)" }} />
-        <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-black/25 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-48 bg-linear-to-b from-black/25 to-transparent" />
       </div>
 
       <main className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-5">
@@ -191,7 +191,7 @@ export default function Dashboard() {
 
             <button
               onClick={refetch}
-              className="group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white/30 border border-white/8 hover:border-white/18 hover:text-white/55 hover:bg-white/[0.04] transition-all"
+              className="group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white/30 border border-white/8 hover:border-white/18 hover:text-white/55 hover:bg-white/4 transition-all"
             >
               <RefreshCw size={12} className="group-hover:rotate-180 transition-transform duration-500" />
               Refresh
@@ -201,7 +201,7 @@ export default function Dashboard() {
 
         {/* ── Stat Cards ── */}
         <section
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 transition-all duration-700 delay-[100ms]"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 transition-all duration-700 delay-100"
           style={{ opacity: mounted ? 1 : 0, transform: mounted ? "none" : "translateY(14px)" }}
         >
           {loadingStats ? (
@@ -210,7 +210,7 @@ export default function Dashboard() {
             <>
               <StatCard icon={<Wallet size={16} />}     label="Wallet Balance" value={stats?.balance ?? 0}         accent="amber"   href="/wallet"    mounted={mounted} />
               <StatCard icon={<TrendingUp size={16} />} label="Total Invested" value={stats?.total_invested ?? 0}  accent="emerald" href="/portfolio" mounted={mounted} />
-              <StatCard icon={<MapPin size={16} />}     label="Lands Owned"    value={stats?.lands_owned ?? 0}     accent="blue"    href="/portfolio" mounted={mounted} isCount sub={`${stats?.units_owned ?? 0} units`} />
+              <StatCard icon={<MapPin size={16} />}     label="Lands with Units Owned"    value={stats?.lands_owned ?? 0}     accent="blue"    href="/portfolio" mounted={mounted} isCount sub={`${stats?.units_owned ?? 0} units`} />
               <StatCard icon={<Activity size={16} />}   label="Withdrawn"      value={stats?.total_withdrawn ?? 0} accent="purple"  href="/wallet"    mounted={mounted} sub={stats?.pending_withdrawals ? `${stats.pending_withdrawals} pending` : null} />
             </>
           )}
@@ -218,7 +218,7 @@ export default function Dashboard() {
 
         {/* ── Quick Actions ── */}
         <section
-          className="grid grid-cols-3 gap-3 sm:gap-4 transition-all duration-700 delay-[175ms]"
+          className="grid grid-cols-3 gap-3 sm:gap-4 transition-all duration-700 delay-175"
           style={{ opacity: mounted ? 1 : 0, transform: mounted ? "none" : "translateY(14px)" }}
         >
           <QuickCard title="Wallet"    desc="Fund & manage"         href="/wallet"    icon={<Wallet size={17} />}     accent="#C8873A" />
@@ -228,7 +228,7 @@ export default function Dashboard() {
 
         {/* ── Transactions ── */}
         <section
-          className="transition-all duration-700 delay-[250ms]"
+          className="transition-all duration-700 delay-250"
           style={{ opacity: mounted ? 1 : 0, transform: mounted ? "none" : "translateY(14px)" }}
         >
           <TransactionsSection transactions={transactions} loading={loadingTx} />
@@ -241,8 +241,8 @@ export default function Dashboard() {
 /* ── SkeletonCard ─────────────────────────────────────────────────────────── */
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/[0.03] h-32 overflow-hidden relative">
-      <div className="absolute inset-0 animate-pulse bg-white/[0.02]" />
+    <div className="rounded-2xl border border-white/8 bg-white/3 h-32 overflow-hidden relative">
+      <div className="absolute inset-0 animate-pulse bg-white/2" />
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite]"
         style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent)" }} />
     </div>
@@ -266,7 +266,7 @@ function StatCard({ icon, label, value, accent, href, mounted, isCount, sub }) {
     : "₦" + animated.toLocaleString("en-NG");
 
   const inner = (
-    <div className="group relative rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 sm:p-5 hover:bg-white/[0.055] hover:border-white/[0.12] transition-all duration-300 overflow-hidden h-full flex flex-col">
+    <div className="group relative rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 sm:p-5 hover:bg-white/5.5 hovehover:border-white/12nsition-all duration-300 overflow-hidden h-full flex flex-col">
       {/* hover glow */}
       <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{ background: `radial-gradient(circle, ${a.glow}, transparent 70%)` }} />
@@ -311,7 +311,7 @@ function QuickCard({ title, desc, href, icon, accent }) {
   return (
     <Link
       href={href}
-      className="group relative rounded-2xl border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.055] hover:border-white/[0.12] transition-all duration-300 overflow-hidden block"
+      className="group relative rounded-2xl border border-white/[0.07] bg-white/3 hover:bg-white/5.5 hover:border-white/12 transition-all duration-300 overflow-hidden block"
     >
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
@@ -343,19 +343,19 @@ function QuickCard({ title, desc, href, icon, accent }) {
 function TransactionsSection({ transactions, loading }) {
   if (loading) {
     return (
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/[0.04] bg-white/[0.02]">
+      <div className="rounded-2xl border border-white/[0.07] bg-white/3 overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/4 bg-white/2">
           <div className="h-4 w-44 rounded-lg bg-white/[0.07] animate-pulse" />
         </div>
-        <div className="divide-y divide-white/[0.04]">
+        <div className="divide-y divide-white/4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="px-5 py-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-white/[0.04] animate-pulse shrink-0" />
+              <div className="w-10 h-10 rounded-xl bg-white/4 animate-pulse shrink-0" />
               <div className="flex-1 space-y-2">
-                <div className="h-3 rounded bg-white/[0.05] animate-pulse w-2/5" />
-                <div className="h-2.5 rounded bg-white/[0.03] animate-pulse w-1/4" />
+                <div className="h-3 rounded bg-white/5 animate-pulse w-2/5" />
+                <div className="h-2.5 rounded bg-white/3 animate-pulse w-1/4" />
               </div>
-              <div className="h-4 rounded bg-white/[0.05] animate-pulse w-20" />
+              <div className="h-4 rounded bg-white/5 animate-pulse w-20" />
             </div>
           ))}
         </div>
@@ -365,7 +365,7 @@ function TransactionsSection({ transactions, loading }) {
 
   if (!transactions?.length) {
     return (
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] py-16 text-center">
+      <div className="rounded-2xl border border-white/[0.07] bg-white/3 py-16 text-center">
         <div
           className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
           style={{ background: "rgba(200,135,58,0.07)", boxShadow: "0 0 0 1px rgba(200,135,58,0.13)" }}
@@ -393,9 +393,9 @@ function TransactionsSection({ transactions, loading }) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
+    <div className="rounded-2xl border border-white/[0.07] bg-white/3 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.05] bg-white/[0.02]">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-white/2">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center"
             style={{ background: "rgba(200,135,58,0.1)", boxShadow: "0 0 0 1px rgba(200,135,58,0.18)" }}>
@@ -404,7 +404,7 @@ function TransactionsSection({ transactions, loading }) {
           <h2 className="text-[10px] font-black uppercase tracking-[0.22em] text-white/35">
             Recent Transactions
           </h2>
-          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-white/[0.08] text-white/20">
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-white/8 text-white/20">
             {transactions.length}
           </span>
         </div>
@@ -418,7 +418,7 @@ function TransactionsSection({ transactions, loading }) {
       <div className="hidden md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/[0.04]">
+            <tr className="border-b border-white/4">
               {[
                 { label: "Type / Asset", align: "text-left" },
                 { label: "Amount",       align: "text-right" },
@@ -444,9 +444,9 @@ function TransactionsSection({ transactions, loading }) {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-[1.04] ${
-                        isCredit === true  ? "bg-emerald-500/[0.09]"
-                        : isCredit === false ? "bg-red-500/[0.09]"
-                        : "bg-white/[0.04]"
+                        isCredit === true  ? "bg-emerald-500/9"
+                        : isCredit === false ? "bg-red-500/9"
+                        : "bg-white/4"
                       }`}>
                         {isCredit === true
                           ? <ArrowDownLeft size={14} className="text-emerald-400" />
@@ -473,7 +473,7 @@ function TransactionsSection({ transactions, loading }) {
 
                   {/* Status */}
                   <td className="px-5 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black border uppercase tracking-[0.1em] ${cls}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black border uppercase tracking-widest ${cls}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
                       {tx?.status || "—"}
                     </span>
@@ -491,17 +491,17 @@ function TransactionsSection({ transactions, loading }) {
       </div>
 
       {/* Mobile list */}
-      <div className="md:hidden divide-y divide-white/[0.04]">
+      <div className="md:hidden divide-y divide-white/4">
         {transactions.slice(0, 6).map((tx, idx) => {
           const { sign, color, isCredit } = amountMeta(tx?.type);
           const { cls, dot }              = statusCfg(tx?.status);
           return (
             <div key={tx?.id ?? idx}
-              className="px-4 py-3.5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
+              className="px-4 py-3.5 flex items-center gap-3 hover:bg-white/2 transition-colors">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                isCredit === true  ? "bg-emerald-500/[0.09]"
-                : isCredit === false ? "bg-red-500/[0.09]"
-                : "bg-white/[0.04]"
+                isCredit === true  ? "bg-emerald-500/9"
+                : isCredit === false ? "bg-red-500/9"
+                : "bg-white/4"
               }`}>
                 {isCredit === true
                   ? <ArrowDownLeft size={15} className="text-emerald-400" />
@@ -533,7 +533,7 @@ function TransactionsSection({ transactions, loading }) {
 
       {/* Footer */}
       {transactions.length > 6 && (
-        <div className="px-5 py-3 border-t border-white/[0.04] text-center bg-white/[0.01]">
+        <div className="px-5 py-3 border-t border-white/4 text-center bg-white/1">
           <Link href="/wallet"
             className="text-xs text-white/20 hover:text-amber-500 transition-colors font-semibold">
             View all {transactions.length} transactions →
