@@ -210,7 +210,7 @@ export default function Dashboard() {
             <>
               <StatCard icon={<Wallet size={16} />}     label="Wallet Balance" value={stats?.balance ?? 0}         accent="amber"   href="/wallet"    mounted={mounted} />
               <StatCard icon={<TrendingUp size={16} />} label="Total Invested" value={stats?.total_invested ?? 0}  accent="emerald" href="/portfolio" mounted={mounted} />
-              <StatCard icon={<MapPin size={16} />}     label="Lands Owned"    value={stats?.lands_owned ?? 0}     accent="blue"    href="/portfolio" mounted={mounted} isCount sub={`${stats?.units_owned ?? 0} units`} />
+              <StatCard icon={<MapPin size={16} />}     label="Lands with Units Owned"    value={stats?.lands_owned ?? 0}     accent="blue"    href="/portfolio" mounted={mounted} isCount sub={`${stats?.units_owned ?? 0} units`} />
               <StatCard icon={<Activity size={16} />}   label="Withdrawn"      value={stats?.total_withdrawn ?? 0} accent="purple"  href="/wallet"    mounted={mounted} sub={stats?.pending_withdrawals ? `${stats.pending_withdrawals} pending` : null} />
             </>
           )}
