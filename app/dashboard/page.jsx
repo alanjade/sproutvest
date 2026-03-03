@@ -6,7 +6,6 @@ import { useAuth } from "../../context/AuthContext";
 import toast from "react-hot-toast";
 import api from "../../utils/api";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { formatNairaShort } from "../../utils/currency";
 import {
   TrendingUp, Wallet, MapPin, Activity,
   ArrowUpRight, LayoutGrid, ChevronRight,
@@ -79,12 +78,26 @@ function useDashboardData(enabled) {
   const loadData = useCallback(async () => {
     if (!enabled) return;
     try {
-      const [statsRes, txRes] = await Promise.all([
+        const [statsRes, txRes, meRes] = await Promise.all([
         api.get("/user/stats"),
         api.get("/transactions/user"),
+        api.get("/me"),
       ]);
-      setStats(statsRes.data?.data || {});
-      setTransactions(txRes.data?.data || []);
+
+      const s  = statsRes.data?.data || {};
+      const me = meRes.data?.user ?? meRes.data?.data ?? {};
+
+      setStats({
+        balance:             me.balance_naira          ?? (me.balance_kobo != null ? me.balance_kobo / 100 : 0),
+        total_invested:      (s.total_invested_kobo    ?? 0) / 100,
+        lands_owned:          s.total_lands_invested   ?? 0,
+        units_owned:          s.total_units_held       ?? 0,
+        total_withdrawn:     (s.total_received_kobo    ?? 0) / 100,
+        pending_withdrawals:  null,
+      });
+
+      const txList = txRes.data?.data?.data ?? txRes.data?.data ?? [];
+      setTransactions(txList);
     } catch (err) {
       if (err.response?.status !== 401) toast.error("Failed to load dashboard data.");
     } finally {
@@ -184,14 +197,14 @@ export default function Dashboard() {
                   {user?.name?.split(" ")[0] || "Investor"}
                 </span>
               </h1>
-              <p className="text-sm text-white/28 mt-1.5">
+              <p className="text-sm text-white/30 mt-1.5">
                 Here's how your investments are performing today.
               </p>
             </div>
 
             <button
               onClick={refetch}
-              className="group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white/30 border border-white/8 hover:border-white/18 hover:text-white/55 hover:bg-white/4 transition-all"
+              className="group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white/30 border border-white/10 hover:border-white/20 hover:text-white/55 hover:bg-white/5 transition-all"
             >
               <RefreshCw size={12} className="group-hover:rotate-180 transition-transform duration-500" />
               Refresh
@@ -208,10 +221,40 @@ export default function Dashboard() {
             [1, 2, 3, 4].map(i => <SkeletonCard key={i} />)
           ) : (
             <>
-              <StatCard icon={<Wallet size={16} />}     label="Wallet Balance" value={stats?.balance ?? 0}         accent="amber"   href="/wallet"    mounted={mounted} />
-              <StatCard icon={<TrendingUp size={16} />} label="Total Invested" value={stats?.total_invested ?? 0}  accent="emerald" href="/portfolio" mounted={mounted} />
-              <StatCard icon={<MapPin size={16} />}     label="Lands with Units Owned"    value={stats?.lands_owned ?? 0}     accent="blue"    href="/portfolio" mounted={mounted} isCount sub={`${stats?.units_owned ?? 0} units`} />
-              <StatCard icon={<Activity size={16} />}   label="Withdrawn"      value={stats?.total_withdrawn ?? 0} accent="purple"  href="/wallet"    mounted={mounted} sub={stats?.pending_withdrawals ? `${stats.pending_withdrawals} pending` : null} />
+              <StatCard
+                icon={<Wallet size={16} />}
+                label="Wallet Balance"
+                value={stats?.balance ?? 0}
+                accent="amber"
+                href="/wallet"
+                mounted={mounted}
+              />
+              <StatCard
+                icon={<TrendingUp size={16} />}
+                label="Total Invested"
+                value={stats?.total_invested ?? 0}
+                accent="emerald"
+                href="/portfolio"
+                mounted={mounted}
+              />
+              <StatCard
+                icon={<MapPin size={16} />}
+                label="Lands Invested"
+                value={stats?.lands_owned ?? 0}
+                accent="blue"
+                href="/portfolio"
+                mounted={mounted}
+                isCount
+                sub={`${stats?.units_owned ?? 0} units`}
+              />
+              <StatCard
+                icon={<Activity size={16} />}
+                label="Sale Proceeds"
+                value={stats?.total_withdrawn ?? 0}
+                accent="purple"
+                href="/wallet"
+                mounted={mounted}
+              />
             </>
           )}
         </section>
@@ -221,9 +264,9 @@ export default function Dashboard() {
           className="grid grid-cols-3 gap-3 sm:gap-4 transition-all duration-700 delay-175"
           style={{ opacity: mounted ? 1 : 0, transform: mounted ? "none" : "translateY(14px)" }}
         >
-          <QuickCard title="Wallet"    desc="Fund & manage"         href="/wallet"    icon={<Wallet size={17} />}     accent="#C8873A" />
-          <QuickCard title="Portfolio" desc="Track investments"     href="/portfolio" icon={<LayoutGrid size={17} />} accent="#2D7A55" />
-          <QuickCard title="Explore"   desc="New opportunities"     href="/lands"     icon={<MapPin size={17} />}     accent="#8B5CF6" />
+          <QuickCard title="Wallet"    desc="Fund & manage"     href="/wallet"    icon={<Wallet size={17} />}     accent="#C8873A" />
+          <QuickCard title="Portfolio" desc="Track investments" href="/portfolio" icon={<LayoutGrid size={17} />} accent="#2D7A55" />
+          <QuickCard title="Explore"   desc="New opportunities" href="/lands"     icon={<MapPin size={17} />}     accent="#8B5CF6" />
         </section>
 
         {/* ── Transactions ── */}
@@ -241,10 +284,8 @@ export default function Dashboard() {
 /* ── SkeletonCard ─────────────────────────────────────────────────────────── */
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/3 h-32 overflow-hidden relative">
-      <div className="absolute inset-0 animate-pulse bg-white/2" />
-      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite]"
-        style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent)" }} />
+    <div className="rounded-2xl border border-white/10 bg-white/5 h-32 overflow-hidden relative">
+      <div className="absolute inset-0 animate-pulse bg-white/5" />
     </div>
   );
 }
@@ -266,12 +307,10 @@ function StatCard({ icon, label, value, accent, href, mounted, isCount, sub }) {
     : "₦" + animated.toLocaleString("en-NG");
 
   const inner = (
-    <div className="group relative rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 sm:p-5 hover:bg-white/5.5 hovehover:border-white/12nsition-all duration-300 overflow-hidden h-full flex flex-col">
-      {/* hover glow */}
+    <div className="group relative rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 sm:p-5 hover:bg-white/5.5 hover:border-white/12 transition-all duration-300 overflow-hidden h-full flex flex-col">
       <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{ background: `radial-gradient(circle, ${a.glow}, transparent 70%)` }} />
 
-      {/* icon */}
       <div
         className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 shrink-0"
         style={{ background: a.glow, boxShadow: `0 0 0 1px ${a.ring}`, color: a.icon }}
@@ -279,12 +318,10 @@ function StatCard({ icon, label, value, accent, href, mounted, isCount, sub }) {
         {icon}
       </div>
 
-      {/* label */}
       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/25 mb-1.5 truncate">
         {label}
       </p>
 
-      {/* value */}
       <p
         className="text-xl sm:text-2xl font-bold text-white leading-none mt-auto"
         style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
@@ -293,9 +330,8 @@ function StatCard({ icon, label, value, accent, href, mounted, isCount, sub }) {
         {display}
       </p>
 
-      {sub && <p className="text-[11px] text-white/22 mt-1.5 truncate">{sub}</p>}
+      {sub && <p className="text-[11px] text-white/25 mt-1.5 truncate">{sub}</p>}
 
-      {/* arrow hint */}
       <ChevronRight
         size={12}
         className="absolute bottom-4 right-4 text-white/15 opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-300"
@@ -343,14 +379,14 @@ function QuickCard({ title, desc, href, icon, accent }) {
 function TransactionsSection({ transactions, loading }) {
   if (loading) {
     return (
-      <div className="rounded-2xl border border-white/[0.07] bg-white/3 overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/4 bg-white/2">
+      <div className="rounded-2xl border border-white/[0.07] bg-white/3flow-hidden">
+        <div className="px-5 py-4 border-b border-white/5 bg-white/2">
           <div className="h-4 w-44 rounded-lg bg-white/[0.07] animate-pulse" />
         </div>
-        <div className="divide-y divide-white/4">
+        <div className="divide-y divide-white/5">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="px-5 py-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-white/4 animate-pulse shrink-0" />
+              <div className="w-10 h-10 rounded-xl bg-white/5 animate-pulse shrink-0" />
               <div className="flex-1 space-y-2">
                 <div className="h-3 rounded bg-white/5 animate-pulse w-2/5" />
                 <div className="h-2.5 rounded bg-white/3 animate-pulse w-1/4" />
@@ -365,7 +401,7 @@ function TransactionsSection({ transactions, loading }) {
 
   if (!transactions?.length) {
     return (
-      <div className="rounded-2xl border border-white/[0.07] bg-white/3 py-16 text-center">
+      <div className="rounded-2xl border border-white/[0.07] bg-white/36 text-center">
         <div
           className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
           style={{ background: "rgba(200,135,58,0.07)", boxShadow: "0 0 0 1px rgba(200,135,58,0.13)" }}
@@ -404,7 +440,7 @@ function TransactionsSection({ transactions, loading }) {
           <h2 className="text-[10px] font-black uppercase tracking-[0.22em] text-white/35">
             Recent Transactions
           </h2>
-          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-white/8 text-white/20">
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-white/10 text-white/20">
             {transactions.length}
           </span>
         </div>
@@ -418,15 +454,15 @@ function TransactionsSection({ transactions, loading }) {
       <div className="hidden md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/4">
+            <tr className="border-b border-white/5">
               {[
-                { label: "Type / Asset", align: "text-left" },
+                { label: "Type / Asset", align: "text-left"  },
                 { label: "Amount",       align: "text-right" },
                 { label: "Status",       align: "text-left"  },
                 { label: "Date",         align: "text-left"  },
               ].map(({ label, align }) => (
                 <th key={label}
-                  className={`px-5 py-3 text-[9px] font-black uppercase tracking-[0.22em] text-white/18 ${align}`}>
+                  className={`px-5 py-3 text-[9px] font-black uppercase tracking-[0.22em] text-white/20 ${align}`}>
                   {label}
                 </th>
               ))}
@@ -436,17 +472,20 @@ function TransactionsSection({ transactions, loading }) {
             {transactions.slice(0, 8).map((tx, idx) => {
               const { sign, color, isCredit } = amountMeta(tx?.type);
               const { cls, dot }              = statusCfg(tx?.status);
+              const amountNaira = Number(tx?.amount_kobo ?? 0) / 100;
+              const landName    = tx?.land?.title ?? null;
+              const txDate      = tx?.transaction_date ?? tx?.created_at;
+
               return (
                 <tr key={tx?.id ?? idx}
                   className="border-b border-white/[0.035] hover:bg-white/[0.022] transition-colors group">
 
-                  {/* Type + Asset */}
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-[1.04] ${
-                        isCredit === true  ? "bg-emerald-500/9"
-                        : isCredit === false ? "bg-red-500/9"
-                        : "bg-white/4"
+                        isCredit === true   ? "bg-emerald-500/10"
+                        : isCredit === false ? "bg-red-500/10"
+                        : "bg-white/5"
                       }`}>
                         {isCredit === true
                           ? <ArrowDownLeft size={14} className="text-emerald-400" />
@@ -458,20 +497,20 @@ function TransactionsSection({ transactions, loading }) {
                         <p className="font-semibold capitalize text-white/75 text-sm leading-none truncate">
                           {tx?.type?.replace(/_/g, " ") || "Transaction"}
                         </p>
-                        <p className="text-[11px] text-white/22 mt-1 truncate">{tx?.land || "Wallet"}</p>
+                        <p className="text-[11px] text-white/22 mt-1 truncate">
+                          {landName || "Wallet"}
+                        </p>
                       </div>
                     </div>
                   </td>
 
-                  {/* Amount */}
                   <td className="px-5 py-4 text-right">
                     <span className={`font-bold tabular-nums text-[0.9rem] ${color}`}
                       style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-                      {sign}₦{Number(tx?.amount ?? 0).toLocaleString()}
+                      {sign}₦{amountNaira.toLocaleString("en-NG")}
                     </span>
                   </td>
 
-                  {/* Status */}
                   <td className="px-5 py-4">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black border uppercase tracking-widest ${cls}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
@@ -479,9 +518,8 @@ function TransactionsSection({ transactions, loading }) {
                     </span>
                   </td>
 
-                  {/* Date */}
                   <td className="px-5 py-4 text-[11px] text-white/22 whitespace-nowrap">
-                    {formatDate(tx?.date)}
+                    {formatDate(txDate)}
                   </td>
                 </tr>
               );
@@ -491,17 +529,21 @@ function TransactionsSection({ transactions, loading }) {
       </div>
 
       {/* Mobile list */}
-      <div className="md:hidden divide-y divide-white/4">
+      <div className="md:hidden divide-y divide-white/5">
         {transactions.slice(0, 6).map((tx, idx) => {
           const { sign, color, isCredit } = amountMeta(tx?.type);
           const { cls, dot }              = statusCfg(tx?.status);
+          const amountNaira = Number(tx?.amount_kobo ?? 0) / 100;
+          const landName    = tx?.land?.title ?? null;
+          const txDate      = tx?.transaction_date ?? tx?.created_at;
+
           return (
             <div key={tx?.id ?? idx}
               className="px-4 py-3.5 flex items-center gap-3 hover:bg-white/2 transition-colors">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                isCredit === true  ? "bg-emerald-500/9"
-                : isCredit === false ? "bg-red-500/9"
-                : "bg-white/4"
+                isCredit === true   ? "bg-emerald-500/10"
+                : isCredit === false ? "bg-red-500/10"
+                : "bg-white/5"
               }`}>
                 {isCredit === true
                   ? <ArrowDownLeft size={15} className="text-emerald-400" />
@@ -514,12 +556,12 @@ function TransactionsSection({ transactions, loading }) {
                   {tx?.type?.replace(/_/g, " ") || "Transaction"}
                 </p>
                 <p className="text-[11px] text-white/22 mt-1 truncate">
-                  {tx?.land || "Wallet"} · {formatDate(tx?.date)}
+                  {landName || "Wallet"} · {formatDate(txDate)}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1.5 shrink-0">
                 <span className={`font-bold text-sm tabular-nums ${color}`}>
-                  {sign}₦{Number(tx?.amount ?? 0).toLocaleString()}
+                  {sign}₦{amountNaira.toLocaleString("en-NG")}
                 </span>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-[0.08em] ${cls}`}>
                   <span className={`w-1 h-1 rounded-full ${dot}`} />
@@ -533,7 +575,7 @@ function TransactionsSection({ transactions, loading }) {
 
       {/* Footer */}
       {transactions.length > 6 && (
-        <div className="px-5 py-3 border-t border-white/4 text-center bg-white/1">
+        <div className="px-5 py-3 border-t border-white/5 text-center bg-white/1">
           <Link href="/wallet"
             className="text-xs text-white/20 hover:text-amber-500 transition-colors font-semibold">
             View all {transactions.length} transactions →

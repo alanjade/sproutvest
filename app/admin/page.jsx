@@ -12,10 +12,10 @@ import {
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
-    lands:   { total: 0, active: 0, disabled: 0 },
-    kyc:     { total: 0, pending: 0, approved: 0, rejected: 0 },
+    lands:     { total: 0, active: 0, disabled: 0 },
+    kyc:       { total: 0, pending: 0, approved: 0, rejected: 0 },
     referrals: { total: 0, completed: 0, pending: 0, totalRewards: 0 },
-    support: { total: 0, open: 0, waiting: 0 },
+    support:   { total: 0, open: 0, waiting: 0 },
   });
   const [loading, setLoading] = useState(true);
 
@@ -23,40 +23,63 @@ export default function AdminDashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const [landsRes, kycRes, referralsRes, supportRes] = await Promise.all([
+      const [
+        landsRes,
+        kycAllRes, kycPendingRes, kycApprovedRes,
+        referralsRes,
+        supportAllRes, supportOpenRes, supportWaitingRes,
+      ] = await Promise.all([
         api.get("/admin/lands"),
-        api.get("/admin/kyc"),
+        api.get("/admin/kyc?per_page=1"),
+        api.get("/admin/kyc?per_page=1&status=pending"),
+        api.get("/admin/kyc?per_page=1&status=approved"),
         api.get("/admin/referrals/stats"),
-        api.get("/admin/support/tickets?per_page=1"), 
+        api.get("/admin/support/tickets?per_page=1"),
+        api.get("/admin/support/tickets?per_page=1&status=open"),
+        api.get("/admin/support/tickets?per_page=1&status=waiting"),
       ]);
 
-      const lands  = landsRes.data.data.data ?? landsRes.data.data;
-      const kycs   = kycRes.data.data.data   ?? kycRes.data.data;
-      const ref    = referralsRes.data.data;
-      const supportMeta = supportRes.data.data;
+      // ── Lands ────────────────────────────────────────────────────────────
+      const landsData  = landsRes.data?.data?.data ?? landsRes.data?.data ?? [];
+      const landsTotal = landsRes.data?.data?.total ?? landsData.length;
+      const landsActive   = landsData.filter((l) => l.is_available).length;
+      const landsDisabled = landsData.filter((l) => !l.is_available).length;
+
+      // ── KYC ──────────────────────────────────────────────────────────────
+      const kycTotal    = kycAllRes.data?.data?.total     ?? kycAllRes.data?.meta?.total     ?? 0;
+      const kycPending  = kycPendingRes.data?.data?.total ?? kycPendingRes.data?.meta?.total ?? 0;
+      const kycApproved = kycApprovedRes.data?.data?.total ?? kycApprovedRes.data?.meta?.total ?? 0;
+
+      // ── Referrals ─────────────────────────────────────────────────────────
+      const ref = referralsRes.data?.data ?? {};
+
+      // ── Support ───────────────────────────────────────────────────────────
+      const supportTotal   = supportAllRes.data?.data?.total     ?? supportAllRes.data?.meta?.total     ?? 0;
+      const supportOpen    = supportOpenRes.data?.data?.total    ?? supportOpenRes.data?.meta?.total    ?? 0;
+      const supportWaiting = supportWaitingRes.data?.data?.total ?? supportWaitingRes.data?.meta?.total ?? 0;
 
       setStats({
         lands: {
-          total:    lands.length,
-          active:   lands.filter((l) => l.is_available).length,
-          disabled: lands.filter((l) => !l.is_available).length,
+          total:    landsTotal,
+          active:   landsActive,
+          disabled: landsDisabled,
         },
         kyc: {
-          total:    kycs.length,
-          pending:  kycs.filter((k) => k.status === "pending").length,
-          approved: kycs.filter((k) => k.status === "approved").length,
-          rejected: kycs.filter((k) => k.status === "rejected").length,
+          total:    kycTotal,
+          pending:  kycPending,
+          approved: kycApproved,
+          rejected: Math.max(0, kycTotal - kycPending - kycApproved),
         },
         referrals: {
-          total:        ref.total_referrals,
-          completed:    ref.completed_referrals,
-          pending:      ref.pending_referrals,
-          totalRewards: ref.total_rewards_issued,
+          total:        ref.total_referrals      ?? 0,
+          completed:    ref.completed_referrals  ?? 0,
+          pending:      ref.pending_referrals    ?? 0,
+          totalRewards: ref.total_rewards_issued ?? 0,
         },
         support: {
-          total:   supportMeta?.total   ?? 0,
-          open:    supportMeta?.open    ?? 0,
-          waiting: supportMeta?.waiting ?? 0,
+          total:   supportTotal,
+          open:    supportOpen,
+          waiting: supportWaiting,
         },
       });
     } catch {
@@ -293,10 +316,10 @@ export default function AdminDashboard() {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { href: "/admin/lands/create",       icon: <Plus size={20} />,         label: "Add Land",    accent: "#C8873A" },
-                { href: "/admin/kyc?status=pending", icon: <ShieldCheck size={20} />,  label: "Review KYC",  accent: "#8B5CF6" },
-                { href: "/admin/support?status=open",icon: <MessageSquare size={20} />,label: "Open Tickets",accent: "#06B6D4" },
-                { href: "/admin/lands",              icon: <Eye size={20} />,           label: "Manage All",  accent: "#C8873A" },
+                { href: "/admin/lands/create",        icon: <Plus size={20} />,          label: "Add Land",     accent: "#C8873A" },
+                { href: "/admin/kyc?status=pending",  icon: <ShieldCheck size={20} />,   label: "Review KYC",   accent: "#8B5CF6" },
+                { href: "/admin/support?status=open", icon: <MessageSquare size={20} />, label: "Open Tickets", accent: "#06B6D4" },
+                { href: "/admin/lands",               icon: <Eye size={20} />,            label: "Manage All",   accent: "#C8873A" },
               ].map((action) => (
                 <Link
                   key={action.label} href={action.href}

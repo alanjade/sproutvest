@@ -39,7 +39,7 @@ export default function AdminReferralManagement() {
         api.get(`/admin/referrals${filter !== "all" ? `?status=${filter}` : ""}`),
       ]);
       setStats(statsRes.data.data);
-      setReferrals(referralsRes.data.data.data);
+      setReferrals(referralsRes.data.data?.data ?? referralsRes.data.data ?? []);
     } catch {
       toast.error("Failed to load referral data");
     } finally {

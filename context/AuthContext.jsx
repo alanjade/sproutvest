@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const res      = await api.get("/me");
-      const userData = res.data.user ?? res.data;
+      const userData = res.data.user ?? res.data.data ?? res.data;
       setUser(userData);
       setCookie("auth_token", token);
       setCookie("user_role", userData?.role || "user");
@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
     } else {
       try {
         const meRes       = await api.get("/me");
-        const fetchedUser = meRes.data.user ?? meRes.data;
+        const fetchedUser = meRes.data.user ?? meRes.data.data ?? meRes.data;
         setUser(fetchedUser);
         setCookie("user_role", fetchedUser?.role || "user");
       } catch {

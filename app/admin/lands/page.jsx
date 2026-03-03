@@ -196,7 +196,7 @@ export default function AdminLands() {
                   <h2 className="font-bold text-white text-base" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
                     Update Price
                   </h2>
-                  <p className="text-xs text-white/30 mt-0.5 truncate max-w-[180px]">{selectedLand.title}</p>
+                  <p className="text-xs text-white/30 mt-0.5 truncate max-w-45">{selectedLand.title}</p>
                 </div>
               </div>
               <button onClick={() => setShowModal(false)}
