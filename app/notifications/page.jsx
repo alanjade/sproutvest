@@ -1,13 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, CheckCheck, Clock, CheckCircle } from "lucide-react";
-import {
-  fetchNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-} from "../../services/notificationService";
+import api from "../../utils/api";
+
+// ── Inline service calls (bypasses notificationService shape issues) ──────────
+
+async function apiFetchNotifications() {
+  // GET /notifications → { success, notifications: <paginator> }
+  // paginator shape: { data: [...], total, current_page, ... }
+  const res = await api.get("/notifications");
+  const payload = res.data?.notifications;
+  // Handle both paginated ({ data: [...] }) and plain array
+  return Array.isArray(payload) ? payload : (payload?.data ?? []);
+}
+
+async function apiMarkAllRead() {
+  // POST /notifications/read
+  await api.post("/notifications/read");
+}
+
+async function apiMarkRead(id) {
+  // POST /notifications/{id}/read
+  await api.post(`/notifications/${id}/read`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
@@ -15,38 +34,49 @@ export default function NotificationsPage() {
   const [filter, setFilter]               = useState("all");
   const router = useRouter();
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchNotifications();
-      setNotifications(res.notifications || []);
+      const list = await apiFetchNotifications();
+      setNotifications(list);
     } catch (err) {
       console.error("Error fetching notifications:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { loadNotifications(); }, []);
+  useEffect(() => { loadNotifications(); }, [loadNotifications]);
 
   const handleMarkAllAsRead = async () => {
-    await markAllNotificationsRead();
-    loadNotifications();
+    try {
+      await apiMarkAllRead();
+      // Optimistic update — mark all locally without refetch
+      setNotifications((prev) => prev.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })));
+    } catch {
+      loadNotifications(); // fallback: refetch on error
+    }
   };
 
   const handleMarkAsRead = async (id) => {
-    await markNotificationRead(id);
-    loadNotifications();
+    try {
+      await apiMarkRead(id);
+      // Optimistic update
+      setNotifications((prev) =>
+        prev.map((n) => n.id === id ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n)
+      );
+    } catch {
+      loadNotifications();
+    }
   };
 
-  const filtered    = filter === "unread" ? notifications.filter(n => !n.read_at) : notifications;
-  const unreadCount = notifications.filter(n => !n.read_at).length;
+  const filtered    = filter === "unread" ? notifications.filter((n) => !n.read_at) : notifications;
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
 
   return (
     <div className="min-h-screen bg-[#0D1F1A] relative"
       style={{ fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif" }}>
 
-      {/* Dot grid */}
       <div className="fixed inset-0 pointer-events-none"
         style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "28px 28px", opacity: 0.03 }} />
 
@@ -81,7 +111,7 @@ export default function NotificationsPage() {
           {[
             { key: "all",    label: `All (${notifications.length})` },
             { key: "unread", label: `Unread (${unreadCount})` },
-          ].map(tab => (
+          ].map((tab) => (
             <button key={tab.key} onClick={() => setFilter(tab.key)}
               className="px-4 py-2 rounded-lg text-xs font-bold transition-all"
               style={filter === tab.key
@@ -96,7 +126,8 @@ export default function NotificationsPage() {
         {loading ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-20 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.05)" }} />
+              <div key={i} className="h-20 rounded-xl animate-pulse"
+                style={{ background: "rgba(255,255,255,0.05)" }} />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -109,12 +140,14 @@ export default function NotificationsPage() {
               {filter === "unread" ? "All caught up!" : "No notifications yet"}
             </p>
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
-              {filter === "unread" ? "You have no unread notifications." : "Activity and updates will appear here."}
+              {filter === "unread"
+                ? "You have no unread notifications."
+                : "Activity and updates will appear here."}
             </p>
           </div>
         ) : (
           <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-            {filtered.map((n, idx) => {
+            {filtered.map((n) => {
               const unread = !n.read_at;
               return (
                 <div key={n.id}
@@ -122,11 +155,11 @@ export default function NotificationsPage() {
                   className={`px-5 py-4 border-b border-white/5 last:border-0 transition-colors ${
                     unread ? "cursor-pointer hover:bg-white/6" : "hover:bg-white/3"
                   }`}
-                  style={unread ? { borderLeft: "2px solid rgba(200, 135, 58, 0.6)" } : {}}
+                  style={unread ? { borderLeft: "2px solid rgba(200,135,58,0.6)" } : {}}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      {/* Icon */}
+
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
                         unread ? "bg-amber-500/15 border border-amber-500/25" : "bg-white/5 border border-white/10"
                       }`}>
@@ -137,17 +170,25 @@ export default function NotificationsPage() {
 
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm leading-snug ${unread ? "font-semibold text-white" : "text-white/50"}`}>
-                          {n.data?.message || "New activity"}
+                          {n.data?.message || n.data?.title || "New activity"}
                         </p>
-                        {n.data?.units && (
+
+                        {/* Transaction detail line */}
+                        {(n.data?.units || n.data?.amount_kobo) && (
                           <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-                            {n.data.units} units · ₦{(n.data.amount_kobo / 100).toLocaleString()}
+                            {n.data.units ? `${n.data.units} units` : ""}
+                            {n.data.units && n.data.amount_kobo ? " · " : ""}
+                            {n.data.amount_kobo ? `₦${(n.data.amount_kobo / 100).toLocaleString()}` : ""}
                           </p>
                         )}
+
                         <div className="flex items-center gap-1.5 mt-1.5">
                           <Clock size={10} style={{ color: "rgba(255,255,255,0.2)" }} />
                           <p className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>
-                            {new Date(n.created_at).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}
+                            {new Date(n.created_at).toLocaleString("en-NG", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
                           </p>
                         </div>
                       </div>
