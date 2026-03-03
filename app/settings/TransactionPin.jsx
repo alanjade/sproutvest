@@ -7,19 +7,20 @@ import PinInput from "../components/PinInput";
 import { KeyRound, AlertCircle } from "lucide-react";
 
 export default function TransactionPin() {
-  const [hasPin, setHasPin] = useState(false);
+  const [hasPin, setHasPin]         = useState(false);
   const [currentPin, setCurrentPin] = useState(["", "", "", ""]);
-  const [newPin, setNewPin] = useState(["", "", "", ""]);
+  const [newPin, setNewPin]         = useState(["", "", "", ""]);
   const [confirmPin, setConfirmPin] = useState(["", "", "", ""]);
-  const [touched, setTouched] = useState({ current: false, new: false, confirm: false });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [touched, setTouched]       = useState({ current: false, new: false, confirm: false });
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState("");
 
   useEffect(() => {
     (async () => {
       try {
         const res = await api.get("/me");
-        setHasPin(!!res.data.user?.transaction_pin);
+        const u = res.data?.user ?? res.data?.data ?? {};
+        setHasPin(!!u.transaction_pin);
       } catch {}
     })();
   }, []);
@@ -42,14 +43,18 @@ export default function TransactionPin() {
       const msg = "New PIN and confirmation PIN do not match.";
       setError(msg); toast.error(msg); return;
     }
+    if (hasPin && currentPinStr.length !== 4) {
+      const msg = "Please enter your current PIN.";
+      setError(msg); toast.error(msg); return;
+    }
 
     setLoading(true);
     try {
       if (hasPin) {
-        await api.post("/pin/update", { old_pin: currentPinStr, new_pin: newPinStr });
+        await api.post("/user/pin/update", { old_pin: currentPinStr, new_pin: newPinStr });
         toast.success("Transaction PIN updated successfully");
       } else {
-        await api.post("/pin/set", { pin: newPinStr });
+        await api.post("/user/pin/set", { pin: newPinStr });
         toast.success("Transaction PIN set successfully");
         setHasPin(true);
       }
@@ -58,7 +63,10 @@ export default function TransactionPin() {
       setConfirmPin(["", "", "", ""]);
       setTouched({ current: false, new: false, confirm: false });
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.error || "Failed to update PIN";
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Failed to update PIN. Please try again.";
       setError(msg);
       toast.error(msg);
     } finally {

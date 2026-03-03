@@ -9,7 +9,10 @@ import { koboToNaira } from "../../utils/currency";
 import { useDebounce } from "../../utils/useDebounce";
 import { MapPin, Maximize2, Flame, X, Lock, ShieldCheck } from "lucide-react";
 
-const MapWithNoSSR = dynamic(() => import("./_LandMap"), { ssr: false });
+const MapWithNoSSR = dynamic(
+  () => import("./_LandMap").then((m) => m.default),
+  { ssr: false }
+);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
