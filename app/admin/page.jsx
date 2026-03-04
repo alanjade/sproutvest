@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import api from "../../../utils/api";
+import api from "../../utils/api";
 import toast from "react-hot-toast";
 import {
   Users, Search, ShieldX,
