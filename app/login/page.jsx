@@ -35,6 +35,11 @@ function LoginForm() {
     if (error) setError("");
   };
 
+  const setCookie = (name, value) => {
+    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = `${name}=${value}; path=/; expires=${expires}; SameSite=Lax`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -42,7 +47,11 @@ function LoginForm() {
     setFieldErrors({});
 
     try {
-      await login(form.email, form.password);
+      const user = await login(form.email, form.password);
+
+      // Set user_role cookie
+      const isAdmin = user?.is_admin === true || user?.data?.is_admin === true;
+      setCookie("user_role", isAdmin ? "admin" : "user");
 
       const paramRedirect = searchParams.get("redirect");
       const savedRedirect = localStorage.getItem("redirectAfterLogin");
@@ -56,7 +65,6 @@ function LoginForm() {
 
       router.push(destination);
     } catch (err) {
-      // Single error handling — no double toast
       if (err.response?.status === 422) {
         const errors = err.response.data?.errors;
         if (errors) {
@@ -88,7 +96,6 @@ function LoginForm() {
       className="min-h-screen bg-[#0D1F1A] flex items-center justify-center px-4 py-12 relative overflow-hidden"
       style={{ fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif" }}
     >
-      {/* Background glows */}
       <div className="absolute top-[-15%] left-[-10%] w-[55vw] h-[55vw] rounded-full opacity-20 pointer-events-none"
         style={{ background: "radial-gradient(circle, #C8873A 0%, transparent 70%)" }} />
       <div className="absolute bottom-[-15%] right-[-10%] w-[45vw] h-[45vw] rounded-full opacity-15 pointer-events-none"
@@ -98,7 +105,6 @@ function LoginForm() {
 
       <div className="relative z-10 w-full max-w-md">
 
-        {/* Logo */}
         <div className="text-center mb-10">
           <Link href="/">
             <h1 className="text-4xl font-bold text-white inline-block"
@@ -110,7 +116,6 @@ function LoginForm() {
           <p className="text-white/40 mt-2 text-sm">Welcome back — your portfolio awaits</p>
         </div>
 
-        {/* Card */}
         <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-sm p-8 shadow-2xl">
           <h2 className="text-2xl font-bold text-white mb-1"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
@@ -118,7 +123,6 @@ function LoginForm() {
           </h2>
           <p className="text-white/40 text-sm mb-8">Enter your credentials to continue</p>
 
-          {/* Inline error banner */}
           {error && (
             <div className="mb-6 p-3.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm flex items-start gap-2.5">
               <AlertCircle size={15} className="mt-0.5 shrink-0" />
@@ -127,8 +131,6 @@ function LoginForm() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-
-            {/* Email */}
             <div>
               <label htmlFor="email" className="block text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">
                 Email Address
@@ -147,7 +149,6 @@ function LoginForm() {
               <FormError error={fieldErrors.email} />
             </div>
 
-            {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label htmlFor="password" className="block text-xs font-semibold text-white/50 uppercase tracking-widest">
@@ -177,7 +178,6 @@ function LoginForm() {
               <FormError error={fieldErrors.password} />
             </div>
 
-            {/* Submit */}
             <button type="submit" disabled={loading}
               className="w-full py-4 rounded-xl font-bold text-[#0D1F1A] flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 mt-2"
               style={{ background: "linear-gradient(135deg, #C8873A 0%, #E8A850 100%)" }}>
@@ -201,12 +201,12 @@ function LoginForm() {
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          <p className="text-center text-sm text-white/40">
-            Don't have an account?{" "}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-1 text-sm">
+            <span className="text-white/40">Don't have an account?</span>
             <Link href="/register" className="text-amber-500 hover:text-amber-400 font-semibold transition-colors">
               Create one free
             </Link>
-          </p>
+          </div>
         </div>
 
         <p className="text-center text-xs text-white/20 mt-6 px-4">

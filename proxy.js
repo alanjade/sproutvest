@@ -23,7 +23,7 @@ const ADMIN_ROUTES = ["/admin"];
 export function proxy(request) {
   const { pathname } = request.nextUrl;
 
-  const token = request.cookies.get("auth_token")?.value;
+  const token    = request.cookies.get("auth_token")?.value;
   const userRole = request.cookies.get("user_role")?.value;
 
   const isPublicRoute = PUBLIC_ROUTES.some(
@@ -46,7 +46,7 @@ export function proxy(request) {
   }
 
   // ── Trying to access admin routes without admin role ──
-  if (isAdminRoute && userRole !== "admin") {
+  if (isAdminRoute && token && userRole !== "admin") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

@@ -7,12 +7,25 @@ import { resetNotificationCache } from "../services/notificationService";
 
 export const AuthContext = createContext(null);
 
-function setCookie(name, value) {
-  document.cookie = `${name}=${value}; path=/; SameSite=Lax`;
+// ─── Cookie helpers ───────────────────────────────────────────────────────────
+
+function getRole(user) {
+  if (!user) return "user";
+  if (user.is_admin === true) return "admin";
+  if (user.role === "admin")  return "admin";
+  return "user";
 }
+
+function setCookie(name, value) {
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `${name}=${value}; path=/; expires=${expires}; SameSite=Lax`;
+}
+
 function clearCookie(name) {
   document.cookie = `${name}=; path=/; max-age=0`;
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const GUEST_ROUTES = [
   "/",
@@ -23,6 +36,8 @@ const GUEST_ROUTES = [
   "/verify-email",
   "/support",
 ];
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
@@ -46,10 +61,10 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const res      = await api.get("/me");
-      const userData = res.data.user ?? res.data.data ?? res.data;
+      const userData = res.data?.data ?? res.data?.user ?? res.data;
       setUser(userData);
       setCookie("auth_token", token);
-      setCookie("user_role", userData?.role || "user");
+      setCookie("user_role", getRole(userData));
     } catch (err) {
       console.error("Auth check failed:", err);
       resetNotificationCache();
@@ -90,21 +105,18 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("token", token);
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
 
-    const userData = res.data?.user || null;
-    setCookie("auth_token", token);
-    setCookie("user_role", userData?.role || "user");
-
-    if (userData) {
+    try {
+      const meRes    = await api.get("/me");
+      const userData = meRes.data?.data ?? meRes.data?.user ?? meRes.data;
       setUser(userData);
-    } else {
-      try {
-        const meRes       = await api.get("/me");
-        const fetchedUser = meRes.data.user ?? meRes.data.data ?? meRes.data;
-        setUser(fetchedUser);
-        setCookie("user_role", fetchedUser?.role || "user");
-      } catch {
-        // non-fatal — user state will resolve on next protected-route load
-      }
+      setCookie("auth_token", token);
+      setCookie("user_role", getRole(userData));
+    } catch {
+      // Fallback to whatever the login response returned
+      const userData = res.data?.user ?? null;
+      setUser(userData);
+      setCookie("auth_token", token);
+      setCookie("user_role", getRole(userData));
     }
   };
 
