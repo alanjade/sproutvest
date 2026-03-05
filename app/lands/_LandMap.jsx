@@ -218,7 +218,7 @@ function FlyAndPopup({ flyTarget, activeLandId, markerRefs, polygonRefs }) {
         }
       }, 120);
     };
-
+    
     map.once("zoomend", openPopup);
 
     return () => {
@@ -226,7 +226,6 @@ function FlyAndPopup({ flyTarget, activeLandId, markerRefs, polygonRefs }) {
       isFlyingRef.current = false;
     };
   }, [flyTarget]); 
-
   return null;
 }
 
@@ -378,6 +377,12 @@ export default function LandMap({
           <TileLayer
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
             attribution="© Esri"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Terrain">
+          <TileLayer
+            url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+            attribution="© OpenTopoMap"
           />
         </LayersControl.BaseLayer>
       </LayersControl>

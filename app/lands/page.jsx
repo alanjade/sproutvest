@@ -146,8 +146,8 @@ export default function LandList() {
       .finally(() => setStatusLoaded(true));
   }, []);
 
+  const landsWithPolygons  = useMemo(() => lands.filter((l) => hasPolygon(l)), [lands]);
   const landsWithPoints    = useMemo(() => lands.filter((l) => l.lat && l.lng && !hasPolygon(l)), [lands]);
-  const landsWithPolygons  = useMemo(() => lands.filter((l) => hasPolygon(l) && l.polygon), [lands]);
   const allLandsWithCoords = useMemo(() => [...landsWithPoints, ...landsWithPolygons], [landsWithPoints, landsWithPolygons]);
 
   const filterByBounds = useCallback((bounds) => {
@@ -155,6 +155,7 @@ export default function LandList() {
       lands.filter((l) => {
         // All lands have lat/lng — use it as the visibility check
         if (l.lat && l.lng) return bounds.contains([+l.lat, +l.lng]);
+        // Fallback: old {lat,lng} polygon arrays
         if (hasPolygon(l) && Array.isArray(l.polygon))
           return l.polygon.some((p) => bounds.contains([p.lat, p.lng]));
         return false;
@@ -221,7 +222,7 @@ export default function LandList() {
 
   const allMapPoints = [
     ...landsWithPoints.map((l) => [+l.lat, +l.lng]),
-    ...landsWithPolygons.flatMap((l) => l.polygon.map((p) => [p.lat, p.lng])),
+    ...landsWithPolygons.filter((l) => l.lat && l.lng).map((l) => [+l.lat, +l.lng]),
   ];
 
   const mapProps = {
