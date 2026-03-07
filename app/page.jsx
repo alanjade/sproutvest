@@ -164,7 +164,7 @@ export default async function Homepage() {
                   fontSize: "clamp(1.6rem, 4vw, 2.4rem)",
                 }}
               >
-                Simple. Secure. Profitable.
+                Simple. Secure. Transparent. Profitable.
               </h2>
             </div>
 
