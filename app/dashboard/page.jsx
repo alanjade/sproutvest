@@ -486,9 +486,9 @@ function TransactionsSection({ transactions, loading }) {
             {transactions.slice(0, 8).map((tx, idx) => {
               const { sign, color, isCredit } = amountMeta(tx?.type);
               const { cls, dot }              = statusCfg(tx?.status);
-              const amountNaira = Number(tx?.amount_kobo ?? 0) / 100;
+              const amountNaira = Number(tx?.amount ?? 0);
               const landName    = tx?.land?.title ?? null;
-              const txDate      = tx?.transaction_date ?? tx?.created_at;
+              const txDate      = tx?.date ?? tx?.created_at;
 
               return (
                 <tr key={tx?.id ?? idx}
