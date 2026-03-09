@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle, Clock, XCircle, RefreshCw, X,
@@ -43,7 +43,7 @@ const SAMPLE_H           = 60;
 const EMA_ALPHA          = 0.25;
 const BLIND_FRAMES       = 40;
 const STILLNESS_THRESHOLD  = 0.004;
-const STILL_CONFIRM_FRAMES = 12;
+const STILL_CONFIRM_FRAMES = 20;
 
 /* ── Dark-themed shared input classes ── */
 const inputCls =
@@ -91,7 +91,7 @@ function DobInput({ value, onChange }) {
       </div>
       <input type="date" value={value || ""} min={minDate} max={today}
         onChange={e => onChange(e.target.value || "")}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" style={{ fontSize: 16 }} />
+        className="absolute inset-0 w-full h-full opacity-[0.01] cursor-pointer" style={{ fontSize: 16 }} />
     </div>
   );
 }
@@ -101,7 +101,8 @@ function FileDropZone({ label, sublabel, name, required = false, value, onChange
   const galleryRef = useRef();
   const cameraRef  = useRef();
   const [drag, setDrag] = useState(false);
-  const preview = value ? URL.createObjectURL(value) : null;
+
+  const preview = useMemo(() => value ? URL.createObjectURL(value) : null, [value]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
   const onDrop = (e) => {
@@ -164,7 +165,7 @@ function FileDropZone({ label, sublabel, name, required = false, value, onChange
   );
 }
 
-/* ── Liveness Check (logic identical, UI re-themed) ── */
+/* ── Liveness Check ── */
 function LivenessCheck({ onCapture, captured, onRetake, fullHeight = false }) {
   const videoRef       = useRef(null);
   const canvasRef      = useRef(null);
@@ -246,16 +247,40 @@ function LivenessCheck({ onCapture, captured, onRetake, fullHeight = false }) {
     prevDataRef.current = null;
     emaRef.current = 0;
     let detectedThisRound = false;
+    let motionFrames = 0;
     let frameCount = 0;
+    let stillFrames = 0; 
+
     const loop = () => {
       if (!detectionOnRef.current) return;
       const raw = measureMotion();
+
+      // Detect static replayed video
+      if (raw < 0.0002) {
+        stillFrames++;
+        if (stillFrames > 80) {
+          setErrorMsg("Possible replay detected. Please use a live camera.");
+          setPhase("error");
+          stopStream();
+          return;
+        }
+      } else {
+        stillFrames = 0;
+      }
+
       emaRef.current = EMA_ALPHA * raw + (1 - EMA_ALPHA) * emaRef.current;
       frameCount++;
+
       if (frameCount > BLIND_FRAMES) {
         const pct = Math.min(100, Math.round((emaRef.current / 0.055) * 100));
         setMotionPct(pct);
-        if (!detectedThisRound && emaRef.current >= threshold) {
+        if (emaRef.current >= threshold) {
+          motionFrames++;
+        } else {
+          motionFrames = 0;
+        }
+
+        if (!detectedThisRound && motionFrames > 6) {
           detectedThisRound = true;
           detectionOnRef.current = false;
           clearInterval(timerRef.current);
@@ -266,7 +291,7 @@ function LivenessCheck({ onCapture, captured, onRetake, fullHeight = false }) {
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
-  }, [measureMotion]);
+  }, [measureMotion, stopStream]);
 
   const startDetectionCountdown = useCallback((thresh, idx) => {
     const MAX_SECS = 8;
@@ -334,10 +359,15 @@ function LivenessCheck({ onCapture, captured, onRetake, fullHeight = false }) {
     setPhase("requesting"); setErrorMsg(""); setCompleted([]); setMotionPct(0);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false,
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } },
+        audio: false,
       });
+
       streamRef.current = stream;
-      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
 
       const excluded  = lastUsedIconsRef.current;
       const preferred = shuffle(LIVENESS_PROMPTS.filter(p => !excluded.has(p.icon)));
@@ -364,12 +394,14 @@ function LivenessCheck({ onCapture, captured, onRetake, fullHeight = false }) {
   const threshold     = currentPrompt ? MOTION_THRESHOLDS[currentPrompt.icon] ?? 0.034 : 0.034;
   const thresholdPct  = Math.min(100, (threshold / 0.055) * 100);
 
+  const capturedUrl = useMemo(() => captured ? URL.createObjectURL(captured) : null, [captured]);
+  useEffect(() => () => { if (capturedUrl) URL.revokeObjectURL(capturedUrl); }, [capturedUrl]);
+
   if (captured) {
-    const url = URL.createObjectURL(captured);
     return (
       <div className="space-y-3">
         <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500/40">
-          <img src={url} alt="liveness" className="w-full object-cover" style={{ transform: "scaleX(-1)", height: fullHeight ? "clamp(280px, 60vw, 440px)" : "clamp(160px, 40vw, 220px)" }} />
+          <img src={capturedUrl} alt="liveness" className="w-full object-cover" style={{ transform: "scaleX(-1)", height: fullHeight ? "clamp(280px, 60vw, 440px)" : "clamp(160px, 40vw, 220px)" }} />
           <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
             <CheckCircle size={11} /> Liveness verified
           </div>
@@ -648,6 +680,34 @@ function ReviewRow({ label, value }) {
 const stepAnim = { initial: { opacity: 0, x: 18 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -18 }, transition: { duration: 0.22 } };
 const formatDateDisplay = (iso) => { if (!iso) return ""; const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; };
 
+function NavButtons({ step, totalSteps, onNext, onSubmit, onBack, submitting }) {
+  const isLast = step === totalSteps - 1;
+  return (
+    <div className="flex items-center justify-between mt-6 pt-5 border-t border-white/10">
+      {step > 0
+        ? <button type="button" onClick={onBack} disabled={submitting}
+            className="flex items-center gap-1.5 text-white/30 hover:text-white/60 text-sm font-semibold transition-colors py-2 px-1">
+            <ChevronLeft size={15} /> Back
+          </button>
+        : <div />}
+      {!isLast ? (
+        <button type="button" onClick={onNext}
+          className="flex items-center justify-center gap-2 font-bold text-sm py-3.5 px-6 rounded-xl transition-all active:scale-95 touch-manipulation text-[#0D1F1A]"
+          style={{ background: "linear-gradient(135deg, #C8873A 0%, #E8A850 100%)" }}>
+          Continue <ChevronRight size={15} />
+        </button>
+      ) : (
+        <button type="button" onClick={onSubmit} disabled={submitting}
+          className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 border border-white/10 disabled:opacity-50 text-white font-bold text-sm py-3.5 px-6 rounded-xl transition-all active:scale-95 touch-manipulation">
+          {submitting
+            ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }} className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />Submitting…</>
+            : <><Shield size={13} />Submit Verification</>}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════════
    MAIN EXPORT
 ══════════════════════════════════════════════════════════════════ */
@@ -660,10 +720,10 @@ export default function KycPanel({ kycStatus: kycStatusProp, setKycStatus: setKy
   const [submitError, setSubmitError] = useState("");
   const [errors, setErrors]           = useState({});
 
-  const setKycStatus = (val) => {
+  const setKycStatus = useCallback((val) => {
     _setKycStatus(val);
     setKycStatusProp?.(val?.status ?? null);
-  };
+  }, [setKycStatusProp]);
 
   const [form, setForm] = useState({
     full_name: "", date_of_birth: "", phone_number: "",
@@ -726,14 +786,28 @@ export default function KycPanel({ kycStatus: kycStatusProp, setKycStatus: setKy
       else if (selectedIdMeta?.maxLen && form.id_number.length < selectedIdMeta.maxLen && selectedIdMeta.numericOnly)
         e.id_number = `Must be exactly ${selectedIdMeta.maxLen} digits`;
     }
-    if (step === 3 && !form.id_front) e.id_front = "Front of ID is required";
-    if (step === 4 && !form.selfie)   e.selfie   = "Please complete the liveness check";
+    if (step === 3 && form.id_type !== "bvn" && !form.id_front) {
+      e.id_front = "Front of ID is required";
+    }
+    if (step === 4 && !form.selfie) e.selfie = "Please complete the liveness check";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const nextStep = () => { if (validateStep()) setStep(s => s + 1); };
-  const prevStep = () => { setStep(s => s - 1); setErrors({}); };
+  const nextStep = () => {
+    if (!validateStep()) return;
+    if (step === 2 && form.id_type === "bvn") { setStep(4); return; }
+    setStep(s => s + 1);
+  };
+
+  const prevStep = () => {
+    if (step === 4 && form.id_type === "bvn") {
+      setStep(2);
+    } else {
+      setStep(s => s - 1);
+    }
+    setErrors({});
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true); setSubmitError("");
@@ -872,7 +946,7 @@ export default function KycPanel({ kycStatus: kycStatusProp, setKycStatus: setKy
         </motion.div>
       )}
 
-      {step === 3 && (
+      {step === 3 && form.id_type !== "bvn" && (
         <motion.div key="s3" {...stepAnim} className="space-y-5">
           <FileDropZone label="ID Front" required sublabel="Clear photo of the front of your document" name="id_front" value={form.id_front} onChange={setFile} />
           {errors.id_front && <p className="text-red-400 text-xs flex items-center gap-1"><AlertCircle size={11} />{errors.id_front}</p>}
@@ -919,21 +993,6 @@ export default function KycPanel({ kycStatus: kycStatusProp, setKycStatus: setKy
     </AnimatePresence>
   );
 
-  const PrimaryBtn = ({ mobile }) => step < STEPS.length - 1 ? (
-    <button type="button" onClick={nextStep}
-      className={`${mobile ? step > 0 ? "flex-1" : "w-full" : ""} flex items-center justify-center gap-2 font-bold transition-all active:scale-95 touch-manipulation text-[#0D1F1A] ${mobile ? "text-sm py-4 rounded-2xl" : "text-sm py-3.5 px-6 rounded-xl"}`}
-      style={{ background: "linear-gradient(135deg, #C8873A 0%, #E8A850 100%)" }}>
-      Continue <ChevronRight size={15} />
-    </button>
-  ) : (
-    <button type="button" onClick={handleSubmit} disabled={submitting}
-      className={`${mobile ? step > 0 ? "flex-1" : "w-full" : ""} flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 border border-white/10 disabled:opacity-50 text-white font-bold transition-all active:scale-95 touch-manipulation ${mobile ? "text-sm py-4 rounded-2xl" : "text-sm py-3.5 px-6 rounded-xl"}`}>
-      {submitting
-        ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }} className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />Submitting…</>
-        : <><Shield size={13} />Submit Verification</>}
-    </button>
-  );
-
   return (
     <div className="space-y-0">
       {kycStatus && kycStatus.status !== "not_submitted" && (
@@ -963,7 +1022,6 @@ export default function KycPanel({ kycStatus: kycStatusProp, setKycStatus: setKy
               <h2 className="text-lg text-white font-bold leading-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{meta.title}</h2>
               <p className="text-white/30 text-xs mt-0.5">{meta.subtitle}</p>
             </div>
-            {/* Mobile step counter */}
             <span className="ml-auto text-xs text-white/20 font-medium tabular-nums sm:hidden">{step + 1}/{STEPS.length}</span>
           </div>
 
@@ -975,16 +1033,14 @@ export default function KycPanel({ kycStatus: kycStatusProp, setKycStatus: setKy
 
           {renderStepContent()}
 
-          {/* Navigation buttons */}
-          <div className="flex items-center justify-between mt-6 pt-5 border-t border-white/10">
-            {step > 0
-              ? <button type="button" onClick={prevStep} disabled={submitting}
-                  className="flex items-center gap-1.5 text-white/30 hover:text-white/60 text-sm font-semibold transition-colors py-2 px-1">
-                  <ChevronLeft size={15} /> Back
-                </button>
-              : <div />}
-            <PrimaryBtn mobile={false} />
-          </div>
+          <NavButtons
+            step={step}
+            totalSteps={STEPS.length}
+            onNext={nextStep}
+            onSubmit={handleSubmit}
+            onBack={prevStep}
+            submitting={submitting}
+          />
         </>
       )}
     </div>
