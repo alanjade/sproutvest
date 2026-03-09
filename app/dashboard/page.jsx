@@ -89,10 +89,10 @@ function useDashboardData(enabled) {
 
       setStats({
         balance:             me.balance_naira          ?? (me.balance_kobo != null ? me.balance_kobo / 100 : 0),
-        total_invested:      (s.total_invested_kobo    ?? 0) / 100,
-        lands_owned:          s.total_lands_invested   ?? 0,
-        units_owned:          s.total_units_held       ?? 0,
-        total_withdrawn:     (s.total_received_kobo    ?? 0) / 100,
+        current_portfolio_value:      (s.current_portfolio_value_kobo    ?? 0) / 100,
+        lands_owned:          s.lands_owned       ?? 0,
+        units_owned:          s.units_owned       ?? 0,
+        total_withdrawn:     (s.total_withdrawn_kobo   ?? 0) / 100,
         pending_withdrawals:  null,
       });
 
@@ -231,8 +231,8 @@ export default function Dashboard() {
               />
               <StatCard
                 icon={<TrendingUp size={16} />}
-                label="Total Invested"
-                value={stats?.total_invested ?? 0}
+                label="Portfolio Value"
+                value={stats?.current_portfolio_value ?? 0}
                 accent="emerald"
                 href="/portfolio"
                 mounted={mounted}
