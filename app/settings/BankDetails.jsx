@@ -39,10 +39,10 @@ export default function BankDetails() {
     (async () => {
       try {
         const res = await api.get("/paystack/banks");
-        setBanks(res.data.data || []);
+        setBanks(res.data.banks || []);
       } catch {
         toast.error("Unable to load bank list.");
-      }
+      }   
     })();
   }, []);
 
@@ -56,7 +56,7 @@ export default function BankDetails() {
           account_number: accountNumber,
           bank_code: bankCode,
         });
-        const name = res.data.data?.account_name || "";
+        const name = res.data.account_name || res.data.data?.account_name || "";
         if (name) {
           setAccountName(name);
           toast.success("Account verified!");
