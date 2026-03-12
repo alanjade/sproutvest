@@ -83,6 +83,7 @@ export default function BankDetails() {
     setLoading(true);
     try {
       const res = await api.put("/user/bank-details", {
+        bank_code: bankCode,
         bank_name: bankName,
         account_number: accountNumber,
         account_name: accountName,
