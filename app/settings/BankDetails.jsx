@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef} from "react";
 import api from "../../utils/api";
 import toast from "react-hot-toast";
 import { Landmark, Lock, CheckCircle, AlertCircle, ChevronDown } from "lucide-react";
@@ -14,6 +14,7 @@ export default function BankDetails() {
   const [isLocked, setIsLocked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const isLockedRef = useRef(false);
 
   /* ── Fetch existing details ── */
   useEffect(() => {
@@ -27,7 +28,10 @@ export default function BankDetails() {
         setBankName(bank);
         setAccountNumber(number);
         setAccountName(name);
-        if (bank && number && name) setIsLocked(true);
+        if (bank && number && name) {
+          isLockedRef.current = true; 
+          setIsLocked(true);
+        }
       } catch {
         toast.error("Unable to load your bank details.");
       }
@@ -48,6 +52,7 @@ export default function BankDetails() {
 
   /* ── Auto-verify account ── */
   useEffect(() => {
+    if (isLockedRef.current) return; 
     if (!bankCode || accountNumber.length !== 10) return;
     const verify = async () => {
       setVerifying(true);
@@ -88,6 +93,7 @@ export default function BankDetails() {
         account_number: accountNumber,
         account_name: accountName,
       });
+      isLockedRef.current = true;
       setIsLocked(true);
       toast.success(res.data.message || "Bank details saved!");
     } catch (err) {
